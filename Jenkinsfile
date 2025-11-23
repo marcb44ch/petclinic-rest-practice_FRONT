@@ -21,9 +21,10 @@ pipeline {
         // 2. Instal·lació i Tests amb Cobertura [cite: 63]
         stage('Install & Test') {
             steps {
+                // Instal·la les dependències
                 sh 'npm ci'
                 
-                sh 'npm run test -- --watch=false --code-coverage'
+                sh 'npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless'
             }
             post {
                 success {
