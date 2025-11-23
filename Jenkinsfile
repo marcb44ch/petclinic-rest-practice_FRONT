@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         nodejs 'my-node'
-        'org.sonarsource.scanner.jenkins.tools.SonarScannerInstallation' 'my-sonar-scanner'
+        'hudson.plugins.sonar.SonarRunnerInstallation' 'my-sonar-scanner'
     }
 
     environment {
