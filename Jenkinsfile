@@ -18,47 +18,26 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    npm install
-                    npm list karma-chrome-launcher karma-coverage
-                '''
+                sh 'npm install'
             }
         }
 
         stage('Build Application') {
             steps {
-                sh '''
-                    # Verificar qué scripts de build están disponibles
-                    npm run | grep build || echo "No se encontraron scripts de build"
-                    
-                    # Intentar diferentes opciones
-                    echo "Intentando build con --configuration=production..."
-                    npm run build -- --configuration=production || 
-                    (echo "Falló --configuration=production, intentando --prod..." && 
-                    npm run build -- --prod) || 
-                    (echo "Falló --prod, intentando build simple..." && 
-                    npm run build) || 
-                    echo "Todos los métodos de build fallaron"
-                '''
+                sh 'npm run build -- --configuration=production'
             }
         }
 
         stage('Test with Coverage') {
             steps {
-                sh '''
-                    # Ejecutar tests con cobertura
-                    npx ng test --watch=false --code-coverage --browsers=ChromeHeadless
-                '''
+                sh 'npx ng test --watch=false --code-coverage --browsers=ChromeHeadless'
             }
             post {
                 always {
-                    // Solo archivar artefactos, sin publishHTML
                     archiveArtifacts artifacts: 'coverage/**/*', allowEmptyArchive: true
-                    // Verificar qué se generó
                     sh '''
-                        echo "=== Contenido del directorio coverage ==="
-                        ls -la coverage/ || echo "No hay directorio coverage"
-                        find . -name "lcov.info" -type f | head -1 | xargs -I {} cat {} | head -5 || echo "No se encontró lcov.info"
+                        echo "=== Verificando cobertura generada ==="
+                        find . -name "lcov.info" -type f | head -1 | xargs -I {} echo "Archivo encontrado: {}" || echo "No se generó lcov.info"
                     '''
                 }
             }
@@ -66,14 +45,6 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    // Verificar que existen los archivos necesarios
-                    sh '''
-                        echo "=== Verificando archivos para SonarQube ==="
-                        find . -name "lcov.info" -type f | head -1 | xargs -I {} echo "Archivo encontrado: {}" || echo "lcov.info no encontrado"
-                        find . -name "coverage" -type d | head -1 | xargs -I {} ls -la {} || echo "Directorio coverage no encontrado"
-                    '''
-                }
                 withSonarQubeEnv(SONAR_SERVER_NAME) {
                     sh 'sonar-scanner'
                 }
@@ -91,15 +62,13 @@ pipeline {
     
     post {
         always {
-            echo "=== Pipeline completado ==="
-            // Opcional: limpiar workspace si es necesario
-            // cleanWs()
+            echo "=== Estado del Pipeline: ${currentBuild.result} ==="
         }
         success {
-            echo "✅ Pipeline ejecutado exitosamente"
+            echo "✅ Pipeline completado exitosamente!"
         }
         failure {
-            echo "❌ Pipeline falló - revisa los logs para más detalles"
+            echo "❌ Pipeline falló - Revisa los logs"
         }
     }
 }

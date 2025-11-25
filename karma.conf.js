@@ -5,18 +5,18 @@ module.exports = function (config) {
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
     plugins: [
       require('karma-jasmine'),
-      require('karma-chrome-launcher'),  // Usar chrome-launcher en lugar de chrome-headless
+      require('karma-chrome-launcher'),
       require('karma-coverage'),
-      require('@angular-devkit/build-build-angular/plugins/karma')
+      require('@angular-devkit/build-angular/plugins/karma')  // CORREGIDO: build-angular
     ],
     client: {
       jasmine: {
         // puedes añadir opciones de configuración aquí
       },
-      clearContext: false // deja el resultado de Jasmine Spec Runner visible en el navegador
+      clearContext: false
     },
     jasmineHtmlReporter: {
-      suppressAll: true // elimina las trazas duplicadas
+      suppressAll: true
     },
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage'),
