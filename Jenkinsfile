@@ -96,8 +96,16 @@ EOF
         
         stage('Quality Gate') {
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                script {
+                    echo "⏳ Esperant que SonarQube sincronitzi l'estat de l'anàlisi..."
+                    
+                    // Espera LLARGA - 5-7 minuts, ja que el problema persisteix
+                    sleep 300 // 5 minuts
+                    
+                    echo "🎯 Iniciant verificació del Quality Gate..."
+                    timeout(time: 15, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
                 }
             }
         }
