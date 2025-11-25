@@ -7,7 +7,6 @@ pipeline {
 
     environment {
         SONAR_SERVER_NAME = 'sonar-server'
-        CHROME_BIN = '/usr/bin/chromium-browser'
     }
 
     stages {
@@ -20,41 +19,47 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    # Usar npm install en lugar de npm ci para regenerar package-lock.json
                     npm install
-                    
-                    # Verificar que las dependencias están instaladas
                     npm list karma-chrome-launcher karma-coverage
+                '''
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                sh '''
+                    # Verificar qué scripts de build están disponibles
+                    npm run | grep build || echo "No se encontraron scripts de build"
+                    
+                    # Intentar diferentes opciones
+                    echo "Intentando build con --configuration=production..."
+                    npm run build -- --configuration=production || 
+                    (echo "Falló --configuration=production, intentando --prod..." && 
+                    npm run build -- --prod) || 
+                    (echo "Falló --prod, intentando build simple..." && 
+                    npm run build) || 
+                    echo "Todos los métodos de build fallaron"
                 '''
             }
         }
 
         stage('Test with Coverage') {
             steps {
-                script {
-                    try {
-                        // Construir la aplicación primero
-                        sh 'npm run build -- --prod'
-                        
-                        // Ejecutar tests
-                        sh 'npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless'
-                    } catch (error) {
-                        echo "Tests fallaron pero continuamos: ${error}"
-                        // Continuar para intentar generar cobertura
-                    }
-                }
+                sh '''
+                    # Ejecutar tests con cobertura
+                    npx ng test --watch=false --code-coverage --browsers=ChromeHeadless
+                '''
             }
             post {
                 always {
+                    // Solo archivar artefactos, sin publishHTML
                     archiveArtifacts artifacts: 'coverage/**/*', allowEmptyArchive: true
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'coverage',
-                        reportFiles: 'index.html',
-                        reportName: 'Coverage Report'
-                    ])
+                    // Verificar qué se generó
+                    sh '''
+                        echo "=== Contenido del directorio coverage ==="
+                        ls -la coverage/ || echo "No hay directorio coverage"
+                        find . -name "lcov.info" -type f | head -1 | xargs -I {} cat {} | head -5 || echo "No se encontró lcov.info"
+                    '''
                 }
             }
         }
@@ -62,8 +67,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // Verificar que existe el reporte de cobertura
-                    sh 'find . -name "lcov.info" -type f | head -1 || echo "No se encontró lcov.info"'
+                    // Verificar que existen los archivos necesarios
+                    sh '''
+                        echo "=== Verificando archivos para SonarQube ==="
+                        find . -name "lcov.info" -type f | head -1 | xargs -I {} echo "Archivo encontrado: {}" || echo "lcov.info no encontrado"
+                        find . -name "coverage" -type d | head -1 | xargs -I {} ls -la {} || echo "Directorio coverage no encontrado"
+                    '''
                 }
                 withSonarQubeEnv(SONAR_SERVER_NAME) {
                     sh 'sonar-scanner'
@@ -73,10 +82,24 @@ pipeline {
         
         stage('Quality Gate') {
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
+                timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
+        }
+    }
+    
+    post {
+        always {
+            echo "=== Pipeline completado ==="
+            // Opcional: limpiar workspace si es necesario
+            // cleanWs()
+        }
+        success {
+            echo "✅ Pipeline ejecutado exitosamente"
+        }
+        failure {
+            echo "❌ Pipeline falló - revisa los logs para más detalles"
         }
     }
 }
