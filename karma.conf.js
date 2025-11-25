@@ -1,18 +1,22 @@
-// Karma configuration file, see link for more information
-// https://karma-runner.github.io/1.0/config/configuration-file.html
-
+// karma.conf.js
 module.exports = function (config) {
   config.set({
     basePath: '',
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
     plugins: [
       require('karma-jasmine'),
-      require('karma-chrome-headless'),
+      require('karma-chrome-launcher'),  // Usar chrome-launcher en lugar de chrome-headless
       require('karma-coverage'),
-      require('@angular-devkit/build-angular/plugins/karma')
+      require('@angular-devkit/build-build-angular/plugins/karma')
     ],
     client: {
-      clearContext: false
+      jasmine: {
+        // puedes añadir opciones de configuración aquí
+      },
+      clearContext: false // deja el resultado de Jasmine Spec Runner visible en el navegador
+    },
+    jasmineHtmlReporter: {
+      suppressAll: true // elimina las trazas duplicadas
     },
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage'),
@@ -20,7 +24,7 @@ module.exports = function (config) {
       reporters: [
         { type: 'html' },
         { type: 'text-summary' },
-        { type: 'lcovonly' } // Este es importante para SonarQube
+        { type: 'lcovonly' }
       ]
     },
     reporters: ['progress', 'coverage'],
@@ -30,6 +34,17 @@ module.exports = function (config) {
     autoWatch: false,
     browsers: ['ChromeHeadless'],
     singleRun: true,
-    restartOnFileChange: false
+    restartOnFileChange: false,
+    customLaunchers: {
+      ChromeHeadless: {
+        base: 'Chrome',
+        flags: [
+          '--headless',
+          '--disable-gpu',
+          '--no-sandbox',
+          '--remote-debugging-port=9222'
+        ]
+      }
+    }
   });
 };
