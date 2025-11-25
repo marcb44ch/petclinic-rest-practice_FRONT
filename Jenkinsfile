@@ -3,8 +3,8 @@ pipeline {
 
     tools {
         nodejs 'my-node'
-        // Agregar SonarScanner como herramienta (usa el nombre que le diste en Jenkins)
-        sonarQubeScanner 'my-sonar-scanner'  // ← Ajusta este nombre según tu configuración
+        // Usar el tipo correcto para SonarScanner
+        hudson.plugins.sonar.SonarRunnerInstallation 'my-sonar-scanner'
     }
 
     environment {
@@ -104,8 +104,8 @@ EOF
                     '''
                 }
                 withSonarQubeEnv(SONAR_SERVER_NAME) {
-                    // Ahora sonar-scanner debería estar disponible gracias a la herramienta
-                    sh 'sonar-scanner -X'  // -X para modo verbose y ver qué está pasando
+                    // Ahora sonar-scanner debería estar disponible
+                    sh 'sonar-scanner -X'  // -X para modo verbose
                 }
             }
         }
@@ -123,14 +123,11 @@ EOF
         always {
             echo "=== Pipeline ${currentBuild.result} ==="
             script {
-                // Verificar si se generó el reporte de SonarQube
                 sh '''
-                    echo "=== Verificando resultados de SonarQube ==="
                     if [ -f "report-task.txt" ]; then
                         echo "✅ SonarQube analysis completed successfully"
-                        cat report-task.txt
                     else
-                        echo "❌ SonarQube analysis may have failed - no report-task.txt found"
+                        echo "❌ SonarQube analysis may have failed"
                     fi
                 '''
             }
