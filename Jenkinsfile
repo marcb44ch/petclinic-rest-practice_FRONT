@@ -21,8 +21,10 @@ pipeline {
             steps {
                 sh '''
                     npm ci
-                    # Instalar las dependencias faltantes de Karma
-                    npm install --save-dev karma-chrome-headless karma-coverage
+                    # Instalar las dependencias CORRECTAS de Karma
+                    npm install --save-dev karma-chrome-launcher karma-coverage
+                    # Verificar que están instaladas
+                    npm list karma-chrome-launcher karma-coverage
                 '''
             }
         }
@@ -31,14 +33,14 @@ pipeline {
             steps {
                 script {
                     try {
-                        // Primero verificar que las dependencias están instaladas
-                        sh 'npm list karma-chrome-headless karma-coverage'
+                        // Construir la aplicación primero
+                        sh 'npm run build -- --prod'
                         
                         // Ejecutar tests
                         sh 'npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless'
                     } catch (error) {
-                        echo "Tests fallaron: ${error}"
-                        // Continuar para generar reporte de cobertura
+                        echo "Tests fallaron pero continuamos: ${error}"
+                        // Continuar para intentar generar cobertura
                     }
                 }
             }
@@ -59,6 +61,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
+                script {
+                    // Verificar que existe el reporte de cobertura
+                    sh 'find . -name "lcov.info" -type f | head -1 || echo "No se encontró lcov.info"'
+                }
                 withSonarQubeEnv(SONAR_SERVER_NAME) {
                     sh 'sonar-scanner'
                 }
