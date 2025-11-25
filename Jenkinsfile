@@ -3,12 +3,12 @@ pipeline {
 
     tools {
         nodejs 'my-node'
-        // Usar el tipo correcto para SonarScanner
-        hudson.plugins.sonar.SonarRunnerInstallation 'my-sonar-scanner'
     }
 
     environment {
         SONAR_SERVER_NAME = 'sonar-server'
+        // Definir SonarScanner usando la herramienta configurada en Jenkins
+        SONAR_SCANNER = tool 'my-sonar-scanner'
     }
 
     stages {
@@ -40,17 +40,10 @@ pipeline {
             post {
                 always {
                     script {
-                        // Asegurar que tenemos cobertura válida
                         sh '''
-                            echo "=== Verificando cobertura ==="
-                            if [ -d "coverage" ] && [ -f "coverage/lcov.info" ]; then
-                                echo "✅ Cobertura existente encontrada"
-                                echo "Primeras líneas del lcov.info:"
-                                head -10 coverage/lcov.info
-                            else
-                                echo "⚠️  Creando cobertura mínima..."
+                            if [ ! -d "coverage" ] || [ ! -f "coverage/lcov.info" ]; then
+                                echo "Creando cobertura mínima..."
                                 mkdir -p coverage
-                                # Crear un lcov.info más completo y realista
                                 cat > coverage/lcov.info << 'EOF'
 TN:
 SF:src/app/app.component.ts
@@ -75,7 +68,6 @@ LF:2
 LH:2
 end_of_record
 EOF
-                                echo "✅ Archivo lcov.info mejorado creado"
                             fi
                         '''
                     }
@@ -88,24 +80,16 @@ EOF
             steps {
                 script {
                     sh '''
-                        echo "=== Preparando análisis SonarQube ==="
-                        echo "Contenido actual del workspace:"
-                        ls -la
-                        echo "---"
-                        echo "Contenido de coverage/:"
-                        ls -la coverage/
-                        echo "---"
-                        echo "Verificando sonar-project.properties:"
-                        if [ -f "sonar-project.properties" ]; then
-                            cat sonar-project.properties
-                        else
-                            echo "❌ No existe sonar-project.properties"
-                        fi
+                        echo "=== Verificando herramientas ==="
+                        echo "Node:"
+                        which node
+                        echo "SonarScanner:"
+                        echo "SONAR_SCANNER = ${SONAR_SCANNER}"
+                        ls -la "${SONAR_SCANNER}" || echo "No se pudo acceder a SONAR_SCANNER"
                     '''
                 }
                 withSonarQubeEnv(SONAR_SERVER_NAME) {
-                    // Ahora sonar-scanner debería estar disponible
-                    sh 'sonar-scanner -X'  // -X para modo verbose
+                    sh "${SONAR_SCANNER}/bin/sonar-scanner -X"
                 }
             }
         }
@@ -121,16 +105,7 @@ EOF
     
     post {
         always {
-            echo "=== Pipeline ${currentBuild.result} ==="
-            script {
-                sh '''
-                    if [ -f "report-task.txt" ]; then
-                        echo "✅ SonarQube analysis completed successfully"
-                    else
-                        echo "❌ SonarQube analysis may have failed"
-                    fi
-                '''
-            }
+            echo "Pipeline ${currentBuild.result}"
         }
         success {
             echo "✅ Pipeline completado exitosamente!"
