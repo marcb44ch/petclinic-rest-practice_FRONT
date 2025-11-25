@@ -20,10 +20,10 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    npm ci
-                    # Instalar las dependencias CORRECTAS de Karma
-                    npm install --save-dev karma-chrome-launcher karma-coverage
-                    # Verificar que están instaladas
+                    # Usar npm install en lugar de npm ci para regenerar package-lock.json
+                    npm install
+                    
+                    # Verificar que las dependencias están instaladas
                     npm list karma-chrome-launcher karma-coverage
                 '''
             }
