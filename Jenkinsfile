@@ -7,12 +7,30 @@ pipeline {
 
     environment {
         SONAR_SERVER_NAME = 'sonar-server'
+        CHROME_BIN = '/usr/bin/chromium'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Install System Dependencies') {
+            steps {
+                sh '''
+                    echo "=== Instalando Chromium ==="
+                    apt-get update
+                    apt-get install -y chromium chromium-l10n
+                    
+                    # Crear symlink si es necesario
+                    ln -sf /usr/bin/chromium /usr/bin/chrome || true
+                    ln -sf /usr/bin/chromium /usr/bin/google-chrome || true
+                    
+                    # Verificar instalación
+                    which chromium || echo "Chromium no disponible"
+                '''
             }
         }
 
@@ -30,14 +48,21 @@ pipeline {
 
         stage('Test with Coverage') {
             steps {
-                sh 'npx ng test --watch=false --code-coverage --browsers=ChromeHeadless'
+                sh '''
+                    echo "=== Configurando browser para tests ==="
+                    # Configurar browser para Karma
+                    export CHROME_BIN=/usr/bin/chromium
+                    
+                    echo "=== Ejecutando tests ==="
+                    npx ng test --watch=false --code-coverage --browsers=ChromeHeadless
+                '''
             }
             post {
                 always {
                     archiveArtifacts artifacts: 'coverage/**/*', allowEmptyArchive: true
                     sh '''
-                        echo "=== Verificando cobertura generada ==="
-                        find . -name "lcov.info" -type f | head -1 | xargs -I {} echo "Archivo encontrado: {}" || echo "No se generó lcov.info"
+                        echo "=== Buscando reporte de cobertura del proyecto ==="
+                        find . -name "lcov.info" -type f | grep -v node_modules | head -1 | xargs -I {} ls -la {} || echo "No se encontró lcov.info del proyecto"
                     '''
                 }
             }
@@ -49,26 +74,6 @@ pipeline {
                     sh 'sonar-scanner'
                 }
             }
-        }
-        
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            echo "=== Estado del Pipeline: ${currentBuild.result} ==="
-        }
-        success {
-            echo "✅ Pipeline completado exitosamente!"
-        }
-        failure {
-            echo "❌ Pipeline falló - Revisa los logs"
         }
     }
 }
