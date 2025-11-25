@@ -1,4 +1,3 @@
-// karma.conf.js
 module.exports = function (config) {
   config.set({
     basePath: '',
@@ -7,16 +6,10 @@ module.exports = function (config) {
       require('karma-jasmine'),
       require('karma-chrome-launcher'),
       require('karma-coverage'),
-      require('@angular-devkit/build-angular/plugins/karma')  // CORREGIDO: build-angular
+      require('@angular-devkit/build-angular/plugins/karma')
     ],
     client: {
-      jasmine: {
-        // puedes añadir opciones de configuración aquí
-      },
       clearContext: false
-    },
-    jasmineHtmlReporter: {
-      suppressAll: true
     },
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage'),
@@ -32,18 +25,13 @@ module.exports = function (config) {
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: false,
-    browsers: ['ChromeHeadless'],
+    browsers: ['ChromeHeadlessNoSandbox'],
     singleRun: true,
     restartOnFileChange: false,
     customLaunchers: {
-      ChromeHeadless: {
-        base: 'Chrome',
-        flags: [
-          '--headless',
-          '--disable-gpu',
-          '--no-sandbox',
-          '--remote-debugging-port=9222'
-        ]
+      ChromeHeadlessNoSandbox: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox', '--headless', '--disable-gpu', '--remote-debugging-port=9222']
       }
     }
   });
